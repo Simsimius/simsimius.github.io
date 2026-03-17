@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chord Builder Trainer</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --panel-2: #1f2937;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --accent-2: #38bdf8;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --fret: #cbd5e1;
+      --string: #94a3b8;
+      --wood: #7c4a2d;
+      --nut: #d1d5db;
+      --selected: #f59e0b;
+      --root: #22c55e;
+      --correct: #38bdf8;
+      --shadow: 0 10px 30px rgba(0,0,0,0.28);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #0b1220 0%, #111827 100%);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 1300px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 2vw, 2.2rem);
+      margin: 0;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.45;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 18px;
+    }
+
+    .card {
+      background: rgba(17, 24, 39, 0.94);
+      border: 1px solid rgba(148, 163, 184, 0.15);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .card-inner {
+      padding: 18px;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin: 0 0 12px;
+      color: #f8fafc;
+      letter-spacing: 0.02em;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    button {
+      border: none;
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: #334155;
+      transition: transform 0.08s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+
+    button:hover { opacity: 0.96; }
+    button:active { transform: translateY(1px); }
+    button.primary { background: var(--accent); color: #06260f; }
+    button.secondary { background: var(--accent-2); color: #062033; }
+    button.warn { background: var(--warn); color: #271700; }
+    button.danger { background: var(--danger); }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text);
+      font-size: 0.9rem;
+      gap: 8px;
+    }
+
+    .status {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .prompt {
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+      border-radius: 14px;
+      padding: 14px;
+      line-height: 1.5;
+    }
+
+    .prompt strong {
+      color: white;
+      font-size: 1.05rem;
+    }
+
+    .feedback {
+      min-height: 48px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .feedback.success {
+      background: rgba(34, 197, 94, 0.13);
+      border: 1px solid rgba(34, 197, 94, 0.28);
+    }
+
+    .feedback.error {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.24);
+    }
+
+    .stats {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stat-box {
+      background: rgba(148, 163, 184, 0.1);
+      border-radius: 14px;
+      padding: 12px 14px;
+      min-width: 110px;
+    }
+
+    .stat-box .label {
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+    }
+
+    .stat-box .value {
+      font-size: 1.2rem;
+      font-weight: 800;
+    }
+
+    .options-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 12px;
+    }
+
+    label.chk {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.93rem;
+      color: var(--text);
+      user-select: none;
+    }
+
+    input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: var(--accent);
+      cursor: pointer;
+    }
+
+    .small {
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .fretboard-wrap {
+      padding: 16px;
+    }
+
+    .fretboard-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      font-size: 0.88rem;
+      color: var(--muted);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .note-list {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .note-chip {
+      border-radius: 999px;
+      padding: 8px 10px;
+      background: rgba(148, 163, 184, 0.13);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    canvas {
+      width: 100%;
+      max-width: 100%;
+      background: linear-gradient(180deg, #8b5a37 0%, #6b4024 100%);
+      border-radius: 18px;
+      border: 1px solid rgba(255,255,255,0.08);
+      display: block;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .options-grid { grid-template-columns: 1fr 1fr 1fr; }
+    }
+
+    @media (max-width: 720px) {
+      .options-grid { grid-template-columns: 1fr 1fr; }
+      .wrap { padding: 12px; }
+      .card-inner, .fretboard-wrap { padding: 14px; }
+    }
+
+    @media (max-width: 520px) {
+      .options-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <div>
+        <h1>Chord Builder Trainer</h1>
+        <div class="subtitle">Build chords from any highlighted root using interval knowledge. Click notes on the fretboard. You can use any voicing and any octave duplication, but every selected note must belong to the chord and every required chord tone must appear at least once.</div>
+      </div>
+      <div class="pill">Standard tuning • High E at top, Low E at bottom</div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="card-inner controls">
+          <div>
+            <div class="section-title">Game</div>
+            <div class="status">
+              <div class="prompt" id="promptBox"></div>
+              <div class="feedback" id="feedbackBox">Choose your chord families, then click <strong>New Challenge</strong>.</div>
+              <div class="stats">
+                <div class="stat-box"><div class="label">Attempts</div><div class="value" id="attempts">0</div></div>
+                <div class="stat-box"><div class="label">Correct</div><div class="value" id="correct">0</div></div>
+                <div class="stat-box"><div class="label">Accuracy</div><div class="value" id="accuracy">0%</div></div>
+              </div>
+            </div>
+            <div class="button-row">
+              <button class="primary" id="newChallengeBtn">New Challenge</button>
+              <button class="secondary" id="checkBtn">Check Answer</button>
+              <button class="warn" id="revealBtn">Reveal</button>
+              <button id="clearBtn">Clear</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="section-title">Chord types in rotation</div>
+            <div class="options-grid" id="chordOptions"></div>
+          </div>
+
+          <div>
+            <div class="section-title">Display</div>
+            <div class="button-row">
+              <button id="toggleLabelsBtn">Show all note labels</button>
+              <button id="toggleRequiredBtn">Hide required tones</button>
+              <button id="randomRootBtn">New root, same chord type</button>
+            </div>
+            <div class="footer-note">Tip: leave only 2–3 chord types enabled if you want focused interval practice, then widen the pool as you improve.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="fretboard-wrap">
+          <div class="fretboard-topbar">
+            <div class="legend">
+              <span><i class="dot" style="background: var(--root);"></i> highlighted root</span>
+              <span><i class="dot" style="background: var(--selected);"></i> your selection</span>
+              <span><i class="dot" style="background: var(--correct);"></i> revealed correct note</span>
+            </div>
+            <div class="pill" id="selectionSummary">Selected pitch classes: none</div>
+          </div>
+          <canvas id="fretboard" width="920" height="360" aria-label="Interactive guitar fretboard"></canvas>
+          <div class="note-list" id="requiredNotes"></div>
+          <div class="footer-note">Rule used by the checker: duplicates across octaves are allowed, but no non-chord tones are allowed, and you must include every required chord tone at least once.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+    const STRING_OPEN_MIDI = [40, 45, 50, 55, 59, 64]; // low E to high E
+    const FRET_COUNT = 15;
+    const STRING_COUNT = 6;
+
+    const CHORD_TYPES = {
+      maj:  { label: 'Major',      suffix: '',      intervals: [0, 4, 7] },
+      min:  { label: 'Minor',      suffix: 'm',     intervals: [0, 3, 7] },
+      dim:  { label: 'Diminished', suffix: 'dim',   intervals: [0, 3, 6] },
+      aug:  { label: 'Augmented',  suffix: 'aug',   intervals: [0, 4, 8] },
+      sus2: { label: 'Sus2',       suffix: 'sus2',  intervals: [0, 2, 7] },
+      sus4: { label: 'Sus4',       suffix: 'sus4',  intervals: [0, 5, 7] },
+      maj7: { label: 'Major 7',    suffix: 'maj7',  intervals: [0, 4, 7, 11] },
+      min7: { label: 'Minor 7',    suffix: 'm7',    intervals: [0, 3, 7, 10] },
+      dom7: { label: 'Dominant 7', suffix: '7',     intervals: [0, 4, 7, 10] },
+      min6: { label: 'Minor 6',    suffix: 'm6',    intervals: [0, 3, 7, 9] },
+      maj6: { label: 'Major 6',    suffix: '6',     intervals: [0, 4, 7, 9] },
+      add9: { label: 'Add9',       suffix: 'add9',  intervals: [0, 4, 7, 2] },
+      madd9:{ label: 'Minor add9', suffix: 'm(add9)', intervals: [0, 3, 7, 2] },
+      dim7: { label: 'Dim7',       suffix: 'dim7',  intervals: [0, 3, 6, 9] },
+      m7b5: { label: 'Half-dim 7', suffix: 'm7b5',  intervals: [0, 3, 6, 10] }
+    };
+
+    const DEFAULT_ENABLED = ['maj', 'min', 'maj7', 'min7', 'dom7', 'sus2', 'sus4', 'dim', 'aug', 'add9', 'min6', 'maj6'];
+
+    const state = {
+      enabledTypes: new Set(DEFAULT_ENABLED),
+      selectedPositions: new Set(),
+      showLabels: false,
+      showRequired: true,
+      attempts: 0,
+      correct: 0,
+      challenge: null,
+      revealMode: false,
+      boardGeometry: null
+    };
+
+    const canvas = document.getElementById('fretboard');
+    const ctx = canvas.getContext('2d');
+
+    const promptBox = document.getElementById('promptBox');
+    const feedbackBox = document.getElementById('feedbackBox');
+    const attemptsEl = document.getElementById('attempts');
+    const correctEl = document.getElementById('correct');
+    const accuracyEl = document.getElementById('accuracy');
+    const chordOptions = document.getElementById('chordOptions');
+    const requiredNotesEl = document.getElementById('requiredNotes');
+    const selectionSummary = document.getElementById('selectionSummary');
+
+    function midiToPc(midi) {
+      return ((midi % 12) + 12) % 12;
+    }
+
+    function noteNameFromPc(pc) {
+      return NOTE_NAMES[((pc % 12) + 12) % 12];
+    }
+
+    function positionKey(stringIndex, fret) {
+      return `${stringIndex}:${fret}`;
+    }
+
+    function parsePositionKey(key) {
+      const [stringIndex, fret] = key.split(':').map(Number);
+      return { stringIndex, fret };
+    }
+
+    function getNoteAt(stringIndex, fret) {
+      const actualStringIndex = STRING_COUNT - 1 - stringIndex;
+      const midi = STRING_OPEN_MIDI[actualStringIndex] + fret;
+      const pc = midiToPc(midi);
+      return { midi, pc, name: noteNameFromPc(pc) };
+    }
+
+    function normalizeIntervals(intervals) {
+      return [...new Set(intervals.map(i => ((i % 12) + 12) % 12))].sort((a, b) => a - b);
+    }
+
+    function getChordPitchClasses(rootPc, typeKey) {
+      const intervals = CHORD_TYPES[typeKey].intervals;
+      return normalizeIntervals(intervals.map(i => rootPc + i));
+    }
+
+    function getEnabledTypeKeys() {
+      return Object.keys(CHORD_TYPES).filter(k => state.enabledTypes.has(k));
+    }
+
+    function sample(arr) {
+      return arr[Math.floor(Math.random() * arr.length)];
+    }
+
+    function buildChordOptions() {
+      chordOptions.innerHTML = '';
+      Object.entries(CHORD_TYPES).forEach(([key, data]) => {
+        const label = document.createElement('label');
+        label.className = 'chk';
+
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = state.enabledTypes.has(key);
+        input.addEventListener('change', () => {
+          if (input.checked) {
+            state.enabledTypes.add(key);
+          } else {
+            state.enabledTypes.delete(key);
+          }
+
+          if (state.enabledTypes.size === 0) {
+            state.enabledTypes.add(key);
+            input.checked = true;
+            setFeedback('At least one chord type must stay enabled.', 'error');
+          }
+        });
+
+        const text = document.createElement('span');
+        text.textContent = `${data.label} (${data.suffix || 'maj'})`;
+        label.appendChild(input);
+        label.appendChild(text);
+        chordOptions.appendChild(label);
+      });
+    }
+
+    function makeChallenge(typeKey = null) {
+      const enabled = getEnabledTypeKeys();
+      if (!enabled.length) return;
+
+      const chosenType = typeKey && state.enabledTypes.has(typeKey) ? typeKey : sample(enabled);
+      const rootPc = Math.floor(Math.random() * 12);
+
+      const allPositions = [];
+      for (let s = 0; s < STRING_COUNT; s++) {
+        for (let f = 0; f <= FRET_COUNT; f++) {
+          const note = getNoteAt(s, f);
+          if (note.pc === rootPc) {
+            allPositions.push({ stringIndex: s, fret: f, note });
+          }
+        }
+      }
+
+      const highlightedRoot = sample(allPositions);
+      const requiredPcs = getChordPitchClasses(rootPc, chosenType);
+
+      state.challenge = {
+        rootPc,
+        typeKey: chosenType,
+        highlightedRoot,
+        requiredPcs
+      };
+
+      state.selectedPositions.clear();
+      state.revealMode = false;
+      updatePrompt();
+      updateRequiredNotes();
+      updateSelectionSummary();
+      setFeedback('New challenge ready. Click notes on the fretboard to build the chord.', '');
+      drawFretboard();
+    }
+
+    function updatePrompt() {
+      if (!state.challenge) {
+        promptBox.innerHTML = '<strong>No active challenge</strong><br/>Click <strong>New Challenge</strong> to begin.';
+        return;
+      }
+
+      const rootName = noteNameFromPc(state.challenge.rootPc);
+      const type = CHORD_TYPES[state.challenge.typeKey];
+      const pos = state.challenge.highlightedRoot;
+      const stringDisplay = ['High E', 'B', 'G', 'D', 'A', 'Low E'][pos.stringIndex];
+      promptBox.innerHTML = `Create a <strong>${rootName}${type.suffix}</strong> chord using this highlighted <strong>${rootName}</strong> as your reference note.<br/>Highlighted position: <strong>${stringDisplay} string, fret ${pos.fret}</strong>.`;
+    }
+
+    function updateRequiredNotes() {
+      requiredNotesEl.innerHTML = '';
+      if (!state.challenge || !state.showRequired) return;
+
+      const rootName = noteNameFromPc(state.challenge.rootPc);
+      const type = CHORD_TYPES[state.challenge.typeKey];
+      const titleChip = document.createElement('div');
+      titleChip.className = 'note-chip';
+      titleChip.textContent = `Target tones for ${rootName}${type.suffix}:`;
+      requiredNotesEl.appendChild(titleChip);
+
+      state.challenge.requiredPcs.forEach(pc => {
+        const chip = document.createElement('div');
+        chip.className = 'note-chip';
+        chip.textContent = noteNameFromPc(pc);
+        requiredNotesEl.appendChild(chip);
+      });
+    }
+
+    function getSelectedPitchClasses() {
+      const pcs = [];
+      state.selectedPositions.forEach(key => {
+        const { stringIndex, fret } = parsePositionKey(key);
+        pcs.push(getNoteAt(stringIndex, fret).pc);
+      });
+      return pcs;
+    }
+
+    function getSelectedPitchClassSet() {
+      return [...new Set(getSelectedPitchClasses())].sort((a, b) => a - b);
+    }
+
+    function updateSelectionSummary() {
+      const pcs = getSelectedPitchClassSet();
+      selectionSummary.textContent = pcs.length
+        ? `Selected pitch classes: ${pcs.map(noteNameFromPc).join(', ')}`
+        : 'Selected pitch classes: none';
+    }
+
+    function arraysEqual(a, b) {
+      return a.length === b.length && a.every((v, i) => v === b[i]);
+    }
+
+    function checkAnswer() {
+      if (!state.challenge) {
+        setFeedback('Start a challenge first.', 'error');
+        return;
+      }
+
+      state.attempts += 1;
+      attemptsEl.textContent = state.attempts;
+
+      const selectedPcsRaw = getSelectedPitchClasses();
+      const selectedSet = getSelectedPitchClassSet();
+      const requiredSet = [...state.challenge.requiredPcs].sort((a, b) => a - b);
+
+      const hasEveryRequiredTone = requiredSet.every(pc => selectedSet.includes(pc));
+      const noExtraTones = selectedSet.every(pc => requiredSet.includes(pc));
+      const hasAtLeastOneSelection = selectedPcsRaw.length > 0;
+
+      if (hasAtLeastOneSelection && hasEveryRequiredTone && noExtraTones && arraysEqual(selectedSet, requiredSet)) {
+        state.correct += 1;
+        correctEl.textContent = state.correct;
+        updateAccuracy();
+        setFeedback(`Correct. You built ${noteNameFromPc(state.challenge.rootPc)}${CHORD_TYPES[state.challenge.typeKey].suffix} using only valid chord tones.`, 'success');
+      } else {
+        updateAccuracy();
+        const missing = requiredSet.filter(pc => !selectedSet.includes(pc)).map(noteNameFromPc);
+        const extra = selectedSet.filter(pc => !requiredSet.includes(pc)).map(noteNameFromPc);
+
+        let msg = 'Not quite.';
+        if (!hasAtLeastOneSelection) msg += ' You have not selected any notes.';
+        if (missing.length) msg += ` Missing: ${missing.join(', ')}.`;
+        if (extra.length) msg += ` Extra non-chord tones: ${extra.join(', ')}.`;
+        if (!missing.length && !extra.length && selectedPcsRaw.length && selectedSet.length === requiredSet.length) {
+          msg += ' Your pitch classes match, but double-check what you clicked.';
+        }
+        setFeedback(msg, 'error');
+      }
+    }
+
+    function revealAnswer() {
+      if (!state.challenge) {
+        setFeedback('Start a challenge first.', 'error');
+        return;
+      }
+      state.revealMode = true;
+      drawFretboard();
+      setFeedback(`Reveal mode on. Correct chord tones are ${state.challenge.requiredPcs.map(noteNameFromPc).join(', ')}.`, '');
+    }
+
+    function clearSelection() {
+      state.selectedPositions.clear();
+      updateSelectionSummary();
+      drawFretboard();
+      setFeedback('Selection cleared.', '');
+    }
+
+    function updateAccuracy() {
+      const acc = state.attempts ? Math.round((state.correct / state.attempts) * 100) : 0;
+      accuracyEl.textContent = `${acc}%`;
+    }
+
+    function setFeedback(message, mode = '') {
+      feedbackBox.className = `feedback${mode ? ' ' + mode : ''}`;
+      feedbackBox.innerHTML = message;
+    }
+
+    function drawFretboard() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const cssWidth = Math.max(300, Math.floor(rect.width || 920));
+      const cssHeight = Math.max(250, Math.floor(cssWidth * 0.39));
+      canvas.width = Math.floor(cssWidth * dpr);
+      canvas.height = Math.floor(cssHeight * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      const w = cssWidth;
+      const h = cssHeight;
+      ctx.clearRect(0, 0, w, h);
+
+      const left = 62;
+      const right = w - 26;
+      const top = 34;
+      const bottom = h - 28;
+      const boardW = right - left;
+      const boardH = bottom - top;
+      const fretSpacing = boardW / (FRET_COUNT + 1);
+      const stringSpacing = boardH / (STRING_COUNT - 1);
+
+      state.boardGeometry = { left, right, top, bottom, fretSpacing, stringSpacing, w, h };
+
+      // background grain
+      const grad = ctx.createLinearGradient(0, top, 0, bottom);
+      grad.addColorStop(0, '#8e5e3b');
+      grad.addColorStop(1, '#6d4126');
+      ctx.fillStyle = grad;
+      roundRect(ctx, 12, 12, w - 24, h - 24, 16, true, false);
+
+      // fretboard markers
+      const markerFrets = [3, 5, 7, 9, 12];
+      markerFrets.forEach(fret => {
+        const x = left + fretSpacing * fret;
+        ctx.fillStyle = 'rgba(255,255,255,0.16)';
+        if (fret === 12) {
+          drawMarker(x - fretSpacing / 2, top + boardH * 0.35);
+          drawMarker(x - fretSpacing / 2, top + boardH * 0.65);
+        } else {
+          drawMarker(x - fretSpacing / 2, top + boardH * 0.5);
+        }
+      });
+
+      function drawMarker(x, y) {
+        ctx.beginPath();
+        ctx.arc(x, y, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // strings
+      for (let s = 0; s < STRING_COUNT; s++) {
+        const y = top + s * stringSpacing;
+        ctx.strokeStyle = 'rgba(226,232,240,0.7)';
+        ctx.lineWidth = 1.2 + (STRING_COUNT - s) * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+        ctx.stroke();
+      }
+
+      // nut and frets
+      for (let f = 0; f <= FRET_COUNT; f++) {
+        const x = left + f * fretSpacing;
+        ctx.strokeStyle = f === 0 ? '#e5e7eb' : 'rgba(226,232,240,0.75)';
+        ctx.lineWidth = f === 0 ? 7 : 2;
+        ctx.beginPath();
+        ctx.moveTo(x, top - 8);
+        ctx.lineTo(x, bottom + 8);
+        ctx.stroke();
+
+        if (f < FRET_COUNT) {
+          ctx.fillStyle = 'rgba(255,255,255,0.85)';
+          ctx.font = '12px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(String(f), x + fretSpacing / 2, top - 14);
+        }
+      }
+      ctx.fillText(String(FRET_COUNT), left + FRET_COUNT * fretSpacing, top - 14);
+
+      // string labels
+      const stringNames = ['E', 'B', 'G', 'D', 'A', 'E'];
+      for (let s = 0; s < STRING_COUNT; s++) {
+        const y = top + s * stringSpacing;
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.font = '13px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(stringNames[s], 26, y + 4);
+      }
+
+      // clickable note spots
+      for (let s = 0; s < STRING_COUNT; s++) {
+        for (let f = 0; f <= FRET_COUNT; f++) {
+          const { x, y } = getNoteCenter(s, f);
+          const key = positionKey(s, f);
+          const note = getNoteAt(s, f);
+          const isSelected = state.selectedPositions.has(key);
+          const isHighlightedRoot = state.challenge && state.challenge.highlightedRoot && state.challenge.highlightedRoot.stringIndex === s && state.challenge.highlightedRoot.fret === f;
+          const isRevealCorrect = state.revealMode && state.challenge && state.challenge.requiredPcs.includes(note.pc);
+
+          let fill = 'rgba(15, 23, 42, 0.35)';
+          let stroke = 'rgba(255,255,255,0.20)';
+
+          if (isRevealCorrect) {
+            fill = 'rgba(56, 189, 248, 0.85)';
+            stroke = 'rgba(255,255,255,0.95)';
+          }
+          if (isSelected) {
+            fill = 'rgba(245, 158, 11, 0.92)';
+            stroke = 'rgba(255,255,255,0.98)';
+          }
+          if (isHighlightedRoot) {
+            fill = 'rgba(34, 197, 94, 0.95)';
+            stroke = 'rgba(255,255,255,1)';
+          }
+
+          ctx.beginPath();
+          ctx.arc(x, y, 15, 0, Math.PI * 2);
+          ctx.fillStyle = fill;
+          ctx.fill();
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = stroke;
+          ctx.stroke();
+
+          const shouldShowThisLabel = isHighlightedRoot || state.showLabels;
+          if (shouldShowThisLabel) {
+            ctx.fillStyle = isSelected || isHighlightedRoot || isRevealCorrect ? '#08131d' : 'rgba(255,255,255,0.92)';
+            ctx.font = 'bold 11px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(note.name, x, y + 0.5);
+          }
+        }
+      }
+
+      function getNoteCenter(stringIndex, fret) {
+        const y = top + stringIndex * stringSpacing;
+        let x;
+        if (fret === 0) {
+          x = left - fretSpacing * 0.45;
+        } else {
+          x = left + fretSpacing * (fret - 0.5);
+        }
+        return { x, y };
+      }
+
+      function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+        if (typeof radius === 'number') {
+          radius = { tl: radius, tr: radius, br: radius, bl: radius };
+        }
+        ctx.beginPath();
+        ctx.moveTo(x + radius.tl, y);
+        ctx.lineTo(x + width - radius.tr, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+        ctx.lineTo(x + width, y + height - radius.br);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+        ctx.lineTo(x + radius.bl, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+        ctx.lineTo(x, y + radius.tl);
+        ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+        ctx.closePath();
+        if (fill) ctx.fill();
+        if (stroke) ctx.stroke();
+      }
+    }
+
+    function getPositionFromPointer(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const x = clientX - rect.left;
+      const y = clientY - rect.top;
+      const g = state.boardGeometry;
+      if (!g) return null;
+
+      let best = null;
+      let bestDist = Infinity;
+      for (let s = 0; s < STRING_COUNT; s++) {
+        for (let f = 0; f <= FRET_COUNT; f++) {
+          const pos = getBoardNoteCenter(s, f, g);
+          const dx = pos.x - x;
+          const dy = pos.y - y;
+          const d = Math.sqrt(dx * dx + dy * dy);
+          if (d < bestDist) {
+            bestDist = d;
+            best = { stringIndex: s, fret: f };
+          }
+        }
+      }
+
+      return bestDist <= 22 ? best : null;
+    }
+
+    function getBoardNoteCenter(stringIndex, fret, g) {
+      const y = g.top + stringIndex * g.stringSpacing;
+      let x;
+      if (fret === 0) {
+        x = g.left - g.fretSpacing * 0.45;
+      } else {
+        x = g.left + g.fretSpacing * (fret - 0.5);
+      }
+      return { x, y };
+    }
+
+    function togglePosition(pos) {
+      const key = positionKey(pos.stringIndex, pos.fret);
+      if (state.selectedPositions.has(key)) {
+        state.selectedPositions.delete(key);
+      } else {
+        state.selectedPositions.add(key);
+      }
+      updateSelectionSummary();
+      drawFretboard();
+    }
+
+    canvas.addEventListener('click', (e) => {
+      const pos = getPositionFromPointer(e.clientX, e.clientY);
+      if (!pos) return;
+      togglePosition(pos);
+    });
+
+    document.getElementById('newChallengeBtn').addEventListener('click', () => makeChallenge());
+    document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+    document.getElementById('revealBtn').addEventListener('click', revealAnswer);
+    document.getElementById('clearBtn').addEventListener('click', clearSelection);
+
+    document.getElementById('toggleLabelsBtn').addEventListener('click', (e) => {
+      state.showLabels = !state.showLabels;
+      e.target.textContent = state.showLabels ? 'Hide all non-root note labels' : 'Show all note labels';
+      drawFretboard();
+    });
+
+    document.getElementById('toggleRequiredBtn').addEventListener('click', (e) => {
+      state.showRequired = !state.showRequired;
+      e.target.textContent = state.showRequired ? 'Hide required tones' : 'Show required tones';
+      updateRequiredNotes();
+    });
+
+    document.getElementById('randomRootBtn').addEventListener('click', () => {
+      if (!state.challenge) {
+        makeChallenge();
+        return;
+      }
+      makeChallenge(state.challenge.typeKey);
+    });
+
+    window.addEventListener('resize', drawFretboard);
+
+    buildChordOptions();
+    updatePrompt();
+    updateRequiredNotes();
+    updateSelectionSummary();
+    drawFretboard();
+    makeChallenge();
+  </script>
+</body>
+</html>
